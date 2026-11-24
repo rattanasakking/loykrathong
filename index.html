@@ -91,6 +91,18 @@
   }
   .drift .bob { animation: bob 3.4s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; }
   @keyframes bob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-8px) rotate(1.5deg); } }
+  .kwrap { position: relative; }
+  /* รูปที่แนบ วางบนตัวกระทง ใต้เปลวเทียน — ขนาดเป็น % ของกระทงจึงพอดีทุกเลน */
+  .kwrap .kp-photo {
+    position: absolute; left: 27%; top: 46%;
+    width: 46%; height: 37%;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px var(--gold), 0 4px 8px rgba(0,0,0,.45);
+    background: #111;
+  }
+  .lane-far .kwrap .kp-photo { border-width: 1px; box-shadow: 0 0 0 1px var(--gold); border-radius: 4px; }
   .drift svg { display: block; }   /* ไม่ใช้ filter: drop-shadow — กิน GPU มากเมื่อมีกระทงขยับหลายลำ ทำให้วิดีโอกระตุก */
   .drift .reflect {
     width: 70%; height: 16px; margin-top: -22px;
@@ -520,12 +532,23 @@ function spawn(lane, item, isNew, startAt = 0){
     bob.appendChild(wish);
   }
   const k = document.createElement('div');
+  k.className = 'kwrap';
   k.innerHTML = krathongSVG(item);
   k.firstChild.setAttribute('width', lane.size);
   k.firstChild.setAttribute('height', lane.size);
+  const photoOnK = imageUrl(item);
+  if (photoOnK) {
+    const img = document.createElement('img');
+    img.className = 'kp-photo';
+    img.alt = '';
+    img.decoding = 'async';
+    img.src = photoOnK;
+    img.onerror = () => img.remove();
+    k.appendChild(img);
+  }
   const refl = document.createElement('div');
   refl.className = 'reflect';
-  bob.append(k.firstChild, refl);
+  bob.append(k, refl);
   el.appendChild(bob);
   river.appendChild(el);
 
