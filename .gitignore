@@ -1,0 +1,12 @@
+# วิดีโอใหญ่เกิน 100MB (GitHub ไม่รับ) — อัปโหลดขึ้นโฮสต์เองครั้งเดียวผ่าน FTP / File Manager
+*.mp4
+
+# ค่าตั้งค่าจริง (รหัสผ่าน DB / app_secret) — ห้าม commit สร้างบนโฮสต์เอง
+app/api/config/config.php
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

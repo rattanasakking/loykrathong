@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลอยกระทงออนไลน์ · วิทยาลัยเทคนิคร้อยเอ็ด</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Charm:wght@400;700&family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #050816;
+    --river-top: #0e2147;
+    --river-deep: #07122b;
+    --gold: #f3c969;
+    --gold-soft: #ffe7a8;
+    --lotus: #ff9ec4;
+    --ink: #eef2ff;
+    --muted: #9fabd2;
+    --river-y: 600px;              /* ระดับผิวน้ำ */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body {
+    color: var(--ink);
+    font-family: 'Sarabun', 'Leelawadee UI', 'Tahoma', sans-serif;
+  }
+  body.idle { cursor: none; }
+
+  /* ===== เวที 16:9 ขนาดจริง 1920×1080 แล้วย่อ/ขยายให้พอดีจอ ===== */
+  #stage {
+    position: absolute; left: 0; top: 0;
+    width: 1920px; height: 1080px;
+    transform-origin: 0 0;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 900px 300px at 1440px 150px, rgba(243,201,105,.09), transparent 70%),
+      radial-gradient(ellipse 900px 380px at 480px 420px, rgba(160,190,255,.08), transparent 70%),
+      linear-gradient(180deg, #04060f 0%, #0a1433 40%, #0e1f45 56%);
+  }
+  .stars, .stars::after {
+    position: absolute; left: 0; top: 0; width: 1920px; height: 600px;
+    background-image:
+      radial-gradient(1.6px 1.6px at 3% 12%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 9% 38%, #fff 50%, transparent),
+      radial-gradient(1.8px 1.8px at 16% 7%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 27% 22%, #fff 50%, transparent),
+      radial-gradient(1.6px 1.6px at 38% 9%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 47% 30%, #fff 50%, transparent),
+      radial-gradient(1.4px 1.4px at 55% 14%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 63% 42%, #fff 50%, transparent),
+      radial-gradient(1.4px 1.4px at 74% 6%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 86% 33%, #fff 50%, transparent),
+      radial-gradient(1.6px 1.6px at 94% 18%, #fff 50%, transparent),
+      radial-gradient(1.2px 1.2px at 99% 60%, #fff 50%, transparent);
+    opacity: .75;
+    pointer-events: none;
+  }
+  .stars::after { content: ''; transform: translate(2%, 9%); animation: twinkle 3.6s ease-in-out infinite alternate; }
+  @keyframes twinkle { from { opacity: .1; } to { opacity: .7; } }
+
+  /* ===== แม่น้ำเต็มความกว้างจอ ===== */
+  .river {
+    position: absolute; left: 0; top: var(--river-y);
+    width: 1920px; height: 480px;
+    z-index: 1;
+    background:
+      radial-gradient(ellipse 360px 60px at 1440px 30px, rgba(255,231,168,.12), transparent 70%),
+      linear-gradient(180deg, var(--river-top) 0%, #0b1a3b 40%, var(--river-deep) 100%);
+  }
+  .wave {
+    position: absolute; left: 0; width: 3840px; height: 40px;
+    animation: waveMove linear infinite;
+    pointer-events: none;
+  }
+  .wave.w1 { top: -18px; animation-duration: 40s; opacity: .9; }
+  .wave.w2 { top: 190px; animation-duration: 52s; opacity: .2; }
+  .wave.w3 { top: 380px; animation-duration: 34s; opacity: .16; }
+  @keyframes waveMove { to { transform: translateX(-1920px); } }
+  .sparkle {
+    position: absolute; height: 2px; border-radius: 2px;
+    background: rgba(255,231,168,.55);
+    animation: glint 3s ease-in-out infinite;
+  }
+  @keyframes glint { 0%,100% { opacity: .1; } 50% { opacity: .8; } }
+
+  .drift {
+    position: absolute; left: 0;
+    display: flex; flex-direction: column; align-items: center;
+    will-change: transform;
+  }
+  .drift .bob { animation: bob 3.4s ease-in-out infinite; display: flex; flex-direction: column; align-items: center; }
+  @keyframes bob { 0%,100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-8px) rotate(1.5deg); } }
+  .drift svg { display: block; filter: drop-shadow(0 10px 10px rgba(0,0,0,.45)); }
+  .drift .reflect {
+    width: 70%; height: 16px; margin-top: -22px;
+    background: radial-gradient(ellipse at center, rgba(255,209,102,.35), transparent 70%);
+  }
+  .wish {
+    max-width: 350px;
+    margin-bottom: -6px;
+    padding: 7px 14px 8px;
+    border-radius: 14px;
+    background: rgba(6,10,28,.72);
+    border: 1px solid rgba(243,201,105,.38);
+    text-align: center;
+  }
+  .wish .who { font-size: 17px; font-weight: 700; color: var(--gold); }
+  .wish .msg {
+    font-size: 19px; line-height: 1.35; color: #fff;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .drift.is-new .wish { border-color: var(--lotus); box-shadow: 0 0 22px rgba(255,158,196,.45); }
+  .drift.is-new .who::before {
+    content: 'ใหม่'; margin-right: 6px;
+    padding: 0 8px; border-radius: 6px;
+    background: var(--lotus); color: #3a0b20; font-size: 14px;
+  }
+  .lane-far { opacity: .8; }
+
+  .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flick .32s ease-in-out infinite alternate; }
+  .flame .core { transform-box: fill-box; transform-origin: 50% 100%; animation: flick2 .26s ease-in-out infinite alternate; }
+  @keyframes flick { from { transform: scaleY(1) skewX(0); } to { transform: scaleY(1.16) skewX(-3deg); } }
+  @keyframes flick2 { from { transform: scaleY(1); } to { transform: scaleY(1.22); } }
+  .glow { animation: glowPulse 1.9s ease-in-out infinite; }
+  @keyframes glowPulse { 0%,100% { opacity: .75; } 50% { opacity: 1; } }
+  .smoke { animation: smoke 2.6s ease-in-out infinite; }
+  @keyframes smoke { 0%,100% { opacity: .15; } 50% { opacity: .7; } }
+
+  /* ===== ฝั่งซ้าย: หัวข้อ + กรอบวิดีโอ (กระทงลอยผ่านด้านหลัง) ===== */
+  .left-title {
+    position: absolute; left: 0; top: 80px; width: 960px; z-index: 3;
+    text-align: center;
+    font-family: 'Charm', 'Sarabun', serif;
+    font-size: 54px; font-weight: 700;
+    color: var(--gold-soft);
+    text-shadow: 0 0 24px rgba(243,201,105,.35);
+  }
+  .video-box {
+    position: absolute;
+    left: 40px; top: 225px;
+    width: 880px; height: 495px;          /* 16:9 */
+    z-index: 4;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #000;
+    box-shadow:
+      0 0 0 3px rgba(243,201,105,.85),
+      0 0 60px rgba(243,201,105,.25),
+      0 30px 60px rgba(0,0,0,.6);
+    transition: left .5s ease, top .5s ease, width .5s ease, height .5s ease, border-radius .5s ease;
+  }
+  .video-box.max {                       /* ขยายวิดีโอเต็มจอ */
+    left: 0; top: 0; width: 1920px; height: 1080px;
+    border-radius: 0;
+    z-index: 50;
+  }
+  #vdo { width: 100%; height: 100%; display: block; object-fit: contain; background: #000; }
+  .vbtn {
+    position: absolute; bottom: 18px; z-index: 2;
+    background: rgba(0,0,0,.55);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 999px;
+    padding: 9px 20px;
+    font: 600 19px 'Sarabun', sans-serif;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: opacity .4s, background .2s;
+  }
+  .vbtn:hover { background: rgba(0,0,0,.8); }
+  #soundBtn { left: 18px; }
+  #maxBtn { right: 18px; }
+  body.idle .vbtn { opacity: 0; }
+
+  /* ===== ฝั่งขวา: ชื่องาน + QR ===== */
+  .info {
+    position: absolute; left: 960px; top: 0; width: 960px; height: 600px; z-index: 3;
+  }
+  .head { position: absolute; left: 0; top: 36px; width: 960px; text-align: center; }
+  .college {
+    display: inline-block;
+    font-size: 30px; font-weight: 700; letter-spacing: .04em;
+    color: var(--gold-soft);
+    padding: 6px 26px;
+    border: 1px solid rgba(243,201,105,.45);
+    border-radius: 999px;
+    background: rgba(243,201,105,.08);
+  }
+  h1 {
+    margin-top: 6px;
+    font-family: 'Charm', 'Sarabun', serif;
+    font-weight: 700; font-size: 96px; line-height: 1.15;
+    color: var(--gold);
+    text-shadow: 0 0 34px rgba(243,201,105,.45), 0 4px 0 rgba(0,0,0,.35);
+  }
+  .subtitle { font-size: 27px; color: var(--ink); opacity: .9; }
+
+  .qr-row {
+    position: absolute; left: 0; top: 272px; width: 960px;
+    display: flex; align-items: center; justify-content: center; gap: 40px;
+  }
+  .qr-card {
+    flex: none;
+    background: #fff;
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow: 0 0 0 4px var(--gold), 0 0 60px rgba(243,201,105,.4), 0 22px 50px rgba(0,0,0,.55);
+  }
+  #qr { width: 250px; height: 250px; }
+  #qr svg { width: 100%; height: 100%; display: block; }
+  .qr-text { width: 470px; }
+  .scan-label { font-size: 44px; font-weight: 800; line-height: 1.15; color: #fff; white-space: nowrap; }
+  .scan-label span { color: var(--lotus); }
+  .scan-hint { margin-top: 8px; font-size: 22px; line-height: 1.45; color: var(--muted); }
+  .stats { margin-top: 16px; display: flex; gap: 14px; }
+  .stat {
+    flex: 1; padding: 10px 16px; border-radius: 16px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  }
+  .stat b {
+    display: block; font-size: 40px; font-weight: 800; line-height: 1.1;
+    color: var(--gold); font-variant-numeric: tabular-nums;
+  }
+  .stat small { font-size: 18px; color: var(--muted); }
+  .url { margin-top: 12px; font-size: 16px; color: rgba(159,171,210,.7); word-break: break-all; cursor: pointer; }
+  .warn { margin-top: 6px; font-size: 16px; line-height: 1.4; color: #ffb3b3; display: none; }
+
+  .toast {
+    position: absolute; left: 1440px; top: 552px; z-index: 6;
+    transform: translate(-50%, 10px);
+    max-width: 860px;
+    padding: 10px 26px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,158,196,.95), rgba(243,201,105,.95));
+    color: #2a0d1c;
+    font-size: 24px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    opacity: 0;
+    transition: opacity .5s, transform .5s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .mode-badge {
+    position: absolute; right: 18px; bottom: 14px; z-index: 6;
+    font-size: 14px; color: rgba(255,255,255,.55);
+    padding: 3px 10px; border-radius: 8px;
+    background: rgba(0,0,0,.35);
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="stars"></div>
+
+  <!-- แม่น้ำเต็มจอ: กระทงลอยจากขวาไปซ้าย ทะลุผ่านด้านหลังวิดีโอ -->
+  <div class="river" id="river">
+    <svg class="wave w1" viewBox="0 0 3840 40" preserveAspectRatio="none"><path id="wpath" d="" fill="#14305e"/><path id="wline" d="" fill="none" stroke="rgba(255,231,168,.35)" stroke-width="2"/></svg>
+    <svg class="wave w2" viewBox="0 0 3840 40" preserveAspectRatio="none"><path class="wl" d="" fill="none" stroke="#9fc4ff" stroke-width="2"/></svg>
+    <svg class="wave w3" viewBox="0 0 3840 40" preserveAspectRatio="none"><path class="wl" d="" fill="none" stroke="#9fc4ff" stroke-width="2"/></svg>
+  </div>
+
+  <!-- ซ้าย -->
+  <div class="left-title">สืบสานประเพณีลอยกระทง ๒๕๖๙</div>
+  <div class="video-box" id="videoBox">
+    <video id="vdo" src="krathong.mp4" autoplay muted loop playsinline preload="auto"></video>
+    <button class="vbtn" id="soundBtn" type="button">🔇 เปิดเสียง</button>
+    <button class="vbtn" id="maxBtn" type="button">⛶ เต็มจอ</button>
+  </div>
+
+  <!-- ขวา -->
+  <section class="info">
+    <div class="head">
+      <div class="college">วิทยาลัยเทคนิคร้อยเอ็ด</div>
+      <h1>ลอยกระทงออนไลน์</h1>
+      <p class="subtitle">ร่วมแต่งกระทง เขียนคำอธิษฐาน แล้วปล่อยลอยไปพร้อมกัน</p>
+    </div>
+    <div class="qr-row">
+      <div class="qr-card"><div id="qr" role="img" aria-label="QR Code สำหรับเข้าเว็บลอยกระทง"></div></div>
+      <div class="qr-text">
+        <div class="scan-label">📱 สแกนเพื่อ<span>ลอยกระทง</span></div>
+        <div class="scan-hint">ใช้กล้องมือถือสแกน แต่งกระทงของคุณ<br>แล้วดูกระทงลอยมาบนจอนี้</div>
+        <div class="stats">
+          <div class="stat"><b id="statTotal">–</b><small>ลอยแล้วทั้งหมด (ลำ)</small></div>
+          <div class="stat"><b id="statToday">–</b><small>วันนี้ (ลำ)</small></div>
+        </div>
+        <div class="url" id="url" title="คลิกเพื่อแก้ไขลิงก์ของ QR Code"></div>
+        <div class="warn" id="warn">⚠ ลิงก์เป็น localhost มือถือจะเข้าไม่ได้ — เปิดหน้านี้ผ่าน IP ของเครื่อง หรือคลิกลิงก์เพื่อกำหนดเอง</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <div class="mode-badge" id="modeBadge"></div>
+</div>
+
+<script src="assets/qrcode.min.js"></script>
+<script src="assets/krathong-svg.js"></script>
+<script>
+/* =====================================================================
+ *  ตั้งค่า
+ * ===================================================================== */
+const CONFIG = {
+  /* ลิงก์เว็บลอยกระทงที่ QR พาไป  '' = อัตโนมัติ (โฟลเดอร์ app/ บนเซิร์ฟเวอร์เดียวกับหน้านี้)
+     ลำดับความสำคัญ: ?url= ใน URL > ค่าที่คลิกแก้ไว้ > APP_URL > อัตโนมัติ */
+  APP_URL: '',
+  API_BASE: 'app/api',     // PHP API ของเว็บลอยกระทง
+  POLL_MS: 5000,           // ดึงกระทงใหม่ทุกกี่ ms
+  STATS_MS: 30000,
+  POOL_SIZE: 50,           // จำนวนกระทงล่าสุดที่วนลอยบนจอ
+};
+
+/* ===== เวที 16:9 พอดีจอ ===== */
+const stage = document.getElementById('stage');
+function fitStage(){
+  const s = Math.min(innerWidth / 1920, innerHeight / 1080);
+  stage.style.transform = `scale(${s})`;
+  stage.style.left = ((innerWidth - 1920 * s) / 2) + 'px';
+  stage.style.top  = ((innerHeight - 1080 * s) / 2) + 'px';
+}
+addEventListener('resize', fitStage);
+fitStage();
+
+/* ===== คลื่นน้ำ (สร้าง path ยาว 2 เท่าจอเพื่อเลื่อนวนได้ไม่สะดุด) ===== */
+function wavePath(step){
+  let d = 'M0,20';
+  for (let x = 0; x < 3840; x += step * 2) d += ` Q${x + step / 2},6 ${x + step},20 Q${x + step * 1.5},34 ${x + step * 2},20`;
+  return d;
+}
+document.getElementById('wline').setAttribute('d', wavePath(120));
+document.getElementById('wpath').setAttribute('d', wavePath(120) + ' V40 H0Z');
+document.querySelectorAll('.wl').forEach((p, i) => p.setAttribute('d', wavePath(i ? 240 : 160)));
+
+/* ===== QR Code ===== */
+const params = new URLSearchParams(location.search);
+const autoUrl = new URL('app/', location.href).href.split('?')[0];
+let target = params.get('url') || localStorage.getItem('krathongQrUrl') || CONFIG.APP_URL || autoUrl;
+
+function renderQr(text){
+  const qr = qrcode(0, 'M');
+  qr.addData(unescape(encodeURIComponent(text)));
+  qr.make();
+  document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
+  document.getElementById('url').textContent = text;
+  const host = new URL(text, location.href).hostname;
+  document.getElementById('warn').style.display = /^(localhost|127\.|\[::1\]$)/.test(host) ? 'block' : 'none';
+}
+renderQr(target);
+document.getElementById('url').addEventListener('click', () => {
+  const v = prompt('ลิงก์เว็บลอยกระทงสำหรับ QR Code (เว้นว่าง = อัตโนมัติ)', target);
+  if (v === null) return;
+  if (v.trim()) { localStorage.setItem('krathongQrUrl', v.trim()); target = v.trim(); }
+  else { localStorage.removeItem('krathongQrUrl'); target = CONFIG.APP_URL || autoUrl; }
+  renderQr(target);
+});
+
+/* ===== วิดีโอ: เล่นวนไม่หยุด ===== */
+const vdo = document.getElementById('vdo');
+const soundBtn = document.getElementById('soundBtn');
+let userPaused = false;
+vdo.addEventListener('ended', () => { vdo.currentTime = 0; vdo.play().catch(()=>{}); });   // สำรองกรณี loop ไม่ทำงาน
+vdo.addEventListener('error', () => setTimeout(() => { vdo.load(); vdo.play().catch(()=>{}); }, 3000));
+setInterval(() => {                                    // watchdog: ถ้าค้าง/หยุดเอง ให้เล่นต่อ
+  if (!userPaused && (vdo.paused || vdo.ended)) vdo.play().catch(()=>{});
+}, 4000);
+vdo.play().catch(()=>{});
+soundBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  vdo.muted = !vdo.muted;
+  vdo.play().catch(()=>{});
+  soundBtn.textContent = vdo.muted ? '🔇 เปิดเสียง' : '🔊 ปิดเสียง';
+});
+
+/* ===== ขยายวิดีโอเต็มจอ ===== */
+const videoBox = document.getElementById('videoBox');
+const maxBtn = document.getElementById('maxBtn');
+let fsByVideo = false;          // เราเป็นคนสั่งเต็มจอเบราว์เซอร์ ตอนขยายวิดีโอ
+function setVideoMax(on){
+  videoBox.classList.toggle('max', on);
+  maxBtn.textContent = on ? '↙ ย่อกลับ' : '⛶ เต็มจอ';
+  if (on && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => fsByVideo = true).catch(()=>{});
+  }
+  if (!on && fsByVideo && document.fullscreenElement) { fsByVideo = false; document.exitFullscreen().catch(()=>{}); }
+}
+maxBtn.addEventListener('click', e => { e.stopPropagation(); setVideoMax(!videoBox.classList.contains('max')); });
+videoBox.addEventListener('dblclick', e => { e.stopPropagation(); setVideoMax(!videoBox.classList.contains('max')); });
+document.addEventListener('fullscreenchange', () => {
+  /* กด Esc ออกจากเต็มจอ ขณะขยายวิดีโอ → ย่อวิดีโอกลับด้วย */
+  if (!document.fullscreenElement && fsByVideo) { fsByVideo = false; setVideoMax(false); }
+});
+
+/* ===== ปุ่มลัด ===== */
+function toggleFs(){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+document.addEventListener('dblclick', toggleFs);           // ดับเบิลคลิกนอกวิดีโอ = ทั้งหน้าเต็มจอ
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'f') toggleFs();
+  if (k === 'v') setVideoMax(!videoBox.classList.contains('max'));
+  if (k === 'escape' && videoBox.classList.contains('max')) setVideoMax(false);
+  if (k === 'm') soundBtn.click();
+  if (e.key === ' ') { e.preventDefault(); userPaused = !vdo.paused; userPaused ? vdo.pause() : vdo.play(); }
+});
+
+/* ซ่อนเมาส์/ปุ่มเมื่อไม่ขยับ */
+let idleTimer;
+document.addEventListener('mousemove', () => {
+  document.body.classList.remove('idle');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => document.body.classList.add('idle'), 3000);
+});
+
+/* =====================================================================
+ *  กระทงของคนอื่น: ดึงจาก API แล้วลอยบนแม่น้ำ (ขวา → ซ้าย ผ่านหลังวิดีโอ)
+ * ===================================================================== */
+const river = document.getElementById('river');
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const rand = (a, b) => a + Math.random() * (b - a);
+
+for (let i = 0; i < 26; i++) {
+  const s = document.createElement('div');
+  s.className = 'sparkle';
+  s.style.cssText = `left:${rand(20, 1880)}px;top:${rand(30, 460)}px;width:${rand(14, 46)}px;animation-delay:${rand(0, 3)}s`;
+  river.appendChild(s);
+}
+
+/* เลนลอย: ไกล (เล็ก ไม่มีคำอธิษฐาน) → ใกล้ (ใหญ่ มีคำอธิษฐาน)   speed = px/วินาที */
+const LANES = [
+  { name:'far',  top: -8,  size: 84,  caption:false, speed: 20, width: 140, nextAt: 0, z: 1 },
+  { name:'mid',  top: 74,  size: 118, caption:true,  speed: 26, width: 360, nextAt: 0, z: 2 },
+  { name:'near', top: 262, size: 150, caption:true,  speed: 32, width: 360, nextAt: 0, z: 3 },
+];
+const TRAVEL_FROM = 1940, TRAVEL_TO = -380, TRAVEL = TRAVEL_FROM - TRAVEL_TO;
+LANES.forEach(l => l.duration = TRAVEL / l.speed * 1000);
+
+let pool = [];            // กระทงล่าสุด (วนแสดง)
+let poolIdx = 0;
+const fresh = [];         // กระทงใหม่ รอขึ้นจอก่อน
+const seen = new Set();
+let newestAt = null;
+
+function nextFromPool(){
+  if (!pool.length) return null;
+  poolIdx = (poolIdx + 1) % pool.length;
+  return pool[poolIdx];
+}
+
+/* เปิดหน้ามาแล้วมีกระทงลอยอยู่ทั่วแม่น้ำเลย ไม่ต้องรอลอยเข้ามาจากขอบ */
+let prefilled = false;
+function prefill(){
+  if (prefilled || !pool.length) return;
+  prefilled = true;
+  for (const lane of LANES) {
+    const gap = (lane.width + 50) / lane.speed * 1000 + 2500;     // ms ระหว่างลำ
+    for (let t = gap * rand(.2, .8); t < lane.duration * .95; t += gap * rand(1, 1.4)) {
+      const item = nextFromPool();
+      if (item) spawn(lane, item, false, t);
+    }
+    lane.nextAt = performance.now() + rand(1500, 5000);
+  }
+}
+
+function spawn(lane, item, isNew, startAt = 0){
+  const el = document.createElement('div');
+  el.className = 'drift lane-' + lane.name + (isNew ? ' is-new' : '');
+  el.style.top = lane.top + 'px';
+  el.style.zIndex = lane.z;
+  el.style.width = lane.width + 'px';
+
+  const bob = document.createElement('div');
+  bob.className = 'bob';
+  bob.style.animationDelay = (-Math.random() * 3) + 's';
+  if (lane.caption) {
+    const wish = document.createElement('div');
+    wish.className = 'wish';
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = item.name ? item.name : 'ผู้ไม่ประสงค์ออกนาม';
+    const msg = document.createElement('div');
+    msg.className = 'msg';
+    msg.textContent = item.message || '';
+    wish.append(who, msg);
+    bob.appendChild(wish);
+  }
+  const k = document.createElement('div');
+  k.innerHTML = krathongSVG(item);
+  k.firstChild.setAttribute('width', lane.size);
+  k.firstChild.setAttribute('height', lane.size);
+  const refl = document.createElement('div');
+  refl.className = 'reflect';
+  bob.append(k.firstChild, refl);
+  el.appendChild(bob);
+  river.appendChild(el);
+
+  const anim = el.animate(
+    [{ transform: `translateX(${TRAVEL_FROM}px)` }, { transform: `translateX(${TRAVEL_TO}px)` }],
+    { duration: lane.duration * rand(.95, 1.05), easing: 'linear' }
+  );
+  anim.onfinish = () => el.remove();
+  if (startAt) { anim.currentTime = startAt; return; }
+
+  /* เว้นระยะไม่ให้ชนลำถัดไปในเลนเดียวกัน */
+  lane.nextAt = performance.now() + (lane.width + 50) / lane.speed * 1000 + rand(0, 5000);
+}
+
+function tick(){
+  prefill();
+  const now = performance.now();
+  for (const lane of LANES) {
+    if (now < lane.nextAt) continue;
+    let item = null, isNew = false;
+    if (lane.caption && fresh.length) { item = fresh.shift(); isNew = true; }   // กระทงใหม่ขึ้นเลนที่มีคำอธิษฐานก่อน
+    else item = nextFromPool();
+    if (item) spawn(lane, item, isNew);
+  }
+}
+
+/* ===== API ===== */
+async function api(path){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(CONFIG.API_BASE + path, { signal: ctrl.signal, cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally { clearTimeout(t); }
+}
+
+function absorb(items){
+  for (const it of items) {
+    if (!newestAt || new Date(it.createdAt) > new Date(newestAt)) newestAt = it.createdAt;
+  }
+}
+
+async function loadInitial(){
+  try {
+    const data = await api('/krathongs?limit=' + CONFIG.POOL_SIZE);
+    pool = data.items || [];
+    pool.forEach(it => seen.add(it.id));
+    absorb(pool);
+    if (!newestAt) newestAt = new Date().toISOString();
+    setStats(data.total, null);
+    refreshStats();
+    setTimeout(poll, CONFIG.POLL_MS);
+    setInterval(refreshStats, CONFIG.STATS_MS);
+  } catch (e) {
+    startDemo();
+  }
+}
+
+async function poll(){
+  try {
+    const q = new URLSearchParams({ since: newestAt, limit: 20 });
+    const data = await api('/krathongs/latest?' + q);
+    const items = (data.items || []).filter(it => !seen.has(it.id));
+    if (items.length) {
+      items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      items.forEach(it => { seen.add(it.id); fresh.push(it); pool.unshift(it); });
+      pool = pool.slice(0, CONFIG.POOL_SIZE);
+      absorb(items);
+      announce(items[items.length - 1], items.length);
+      refreshStats();
+    }
+  } catch (e) { /* เน็ตสะดุด: รอบหน้าลองใหม่ */ }
+  setTimeout(poll, CONFIG.POLL_MS);
+}
+
+async function refreshStats(){
+  try { const s = await api('/krathongs/stats'); setStats(s.total, s.today); } catch (e) {}
+}
+function setStats(total, today){
+  if (total != null) document.getElementById('statTotal').textContent = Number(total).toLocaleString('th-TH');
+  if (today != null) document.getElementById('statToday').textContent = Number(today).toLocaleString('th-TH');
+}
+
+const toastEl = document.getElementById('toast');
+let toastTimer;
+function announce(item, count){
+  const who = item.name || 'ใครบางคน';
+  toastEl.textContent = count > 1
+    ? `🪷 มีกระทงลอยมาใหม่ ${count} ลำ — ล่าสุดจาก ${who}`
+    : `🪷 ${who} เพิ่งลอยกระทง`;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 6000);
+}
+
+/* ===== โหมดตัวอย่าง: ใช้เมื่อยังต่อ API/ฐานข้อมูลไม่ได้ ===== */
+function demoItem(){
+  return {
+    id: Math.random().toString(16).slice(2),
+    base: pick(Object.keys(BASES)), flower: pick(Object.keys(FLOWERS)), candle: pick(Object.keys(CANDLES)),
+    incense: Math.random() < .6,
+    name: pick(['พิมพ์ชนก','ต้นน้ำ','ภูมิ','แพรวา','มายด์','น้ำฝน','กอล์ฟ','ฝ้าย','พลอย','ไอซ์']),
+    message: pick([
+      'ขอให้ความทุกข์ทั้งหลายจมหายไปกับสายน้ำ ขอให้ชีวิตมีแต่ความสุข',
+      'ขอให้สอบผ่านทุกวิชา สมหวังทุกเรื่องที่ตั้งใจไว้',
+      'ขอให้ครอบครัวสุขภาพแข็งแรง',
+      'ลอยสิ่งที่ไม่ดีทั้งหมดทิ้งไป ขอให้ปีหน้าดีกว่าปีนี้',
+      'ขอให้ทุกคนที่อ่านข้อความนี้ มีความสุขมาก ๆ นะ',
+    ]),
+    createdAt: new Date().toISOString(),
+  };
+}
+function startDemo(){
+  const b = document.getElementById('modeBadge');
+  b.textContent = 'โหมดตัวอย่าง · ยังเชื่อมต่อฐานข้อมูลไม่ได้';
+  b.style.display = 'block';
+  pool = Array.from({ length: 24 }, demoItem);
+  setStats(0, 0);
+  /* ลองต่อ API ใหม่ทุก 30 วินาที — ได้แล้วโหลดหน้าใหม่เป็นข้อมูลจริง */
+  setInterval(async () => { try { await api('/krathongs/stats'); location.reload(); } catch (e) {} }, 30000);
+}
+
+loadInitial();
+setInterval(tick, 500);
+</script>
+</body>
+</html>
