@@ -302,11 +302,16 @@
 /* =====================================================================
  *  ตั้งค่า
  * ===================================================================== */
+/* เว็บจริง: เปิดหน้านี้จากเครื่องในงาน (localhost) → วิดีโอเล่นจากฮาร์ดดิสก์
+   แต่ QR และกระทงใช้ของเว็บจริง   ใส่ ?api=local ต่อท้าย URL เพื่อใช้ฐานข้อมูลในเครื่องแทน */
+const LIVE_SITE = 'https://loykrathong.retc.ac.th/';
+const useLive = location.origin + '/' !== LIVE_SITE && new URLSearchParams(location.search).get('api') !== 'local';
+
 const CONFIG = {
   /* ลิงก์เว็บลอยกระทงที่ QR พาไป  '' = อัตโนมัติ (โฟลเดอร์ app/ บนเซิร์ฟเวอร์เดียวกับหน้านี้)
      ลำดับความสำคัญ: ?url= ใน URL > ค่าที่คลิกแก้ไว้ > APP_URL > อัตโนมัติ */
-  APP_URL: '',
-  API_BASE: 'app/api',     // PHP API ของเว็บลอยกระทง
+  APP_URL: useLive ? LIVE_SITE + 'app/' : '',
+  API_BASE: useLive ? LIVE_SITE + 'app/api' : 'app/api',
   POLL_MS: 5000,           // ดึงกระทงใหม่ทุกกี่ ms
   STATS_MS: 30000,
   POOL_SIZE: 50,           // จำนวนกระทงล่าสุดที่วนลอยบนจอ
@@ -534,19 +539,43 @@ function absorb(items){
   }
 }
 
+/* เก็บกระทงล่าสุดไว้ในเครื่อง — เน็ตหลุดแล้วรีเฟรชหน้า ก็ยังมีกระทงจริงลอยอยู่ */
+const CACHE_KEY = 'krathongDisplayCache:' + CONFIG.API_BASE;
+function saveCache(){ try { localStorage.setItem(CACHE_KEY, JSON.stringify(pool.slice(0, CONFIG.POOL_SIZE))); } catch (e) {} }
+function loadCache(){ try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); } catch (e) { return []; } }
+
+const badge = document.getElementById('modeBadge');
+function setOnline(ok){
+  badge.textContent = '⚠ ออฟไลน์ · กำลังเชื่อมต่อใหม่';
+  badge.style.display = ok ? 'none' : 'block';
+}
+
+let started = false;
 async function loadInitial(){
   try {
     const data = await api('/krathongs?limit=' + CONFIG.POOL_SIZE);
     pool = data.items || [];
     pool.forEach(it => seen.add(it.id));
     absorb(pool);
+    saveCache();
+    setOnline(true);
     if (!newestAt) newestAt = new Date().toISOString();
     setStats(data.total, null);
     refreshStats();
-    setTimeout(poll, CONFIG.POLL_MS);
-    setInterval(refreshStats, CONFIG.STATS_MS);
+    if (!started) {
+      started = true;
+      setTimeout(poll, CONFIG.POLL_MS);
+      setInterval(refreshStats, CONFIG.STATS_MS);
+    }
   } catch (e) {
-    startDemo();
+    /* ต่อไม่ได้ตั้งแต่เปิดหน้า: ใช้กระทงจริงที่เคยเก็บไว้ แล้วลองใหม่ทุก 15 วินาที */
+    setOnline(false);
+    if (!pool.length) {
+      pool = loadCache();
+      pool.forEach(it => seen.add(it.id));
+      absorb(pool);
+    }
+    setTimeout(loadInitial, 15000);
   }
 }
 
@@ -554,16 +583,18 @@ async function poll(){
   try {
     const q = new URLSearchParams({ since: newestAt, limit: 20 });
     const data = await api('/krathongs/latest?' + q);
+    setOnline(true);
     const items = (data.items || []).filter(it => !seen.has(it.id));
     if (items.length) {
       items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       items.forEach(it => { seen.add(it.id); fresh.push(it); pool.unshift(it); });
       pool = pool.slice(0, CONFIG.POOL_SIZE);
       absorb(items);
+      saveCache();
       announce(items[items.length - 1], items.length);
       refreshStats();
     }
-  } catch (e) { /* เน็ตสะดุด: รอบหน้าลองใหม่ */ }
+  } catch (e) { setOnline(false); /* เน็ตสะดุด: กระทงเดิมยังลอยวนต่อ รอบหน้าลองใหม่ */ }
   setTimeout(poll, CONFIG.POLL_MS);
 }
 
@@ -585,33 +616,6 @@ function announce(item, count){
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 6000);
-}
-
-/* ===== โหมดตัวอย่าง: ใช้เมื่อยังต่อ API/ฐานข้อมูลไม่ได้ ===== */
-function demoItem(){
-  return {
-    id: Math.random().toString(16).slice(2),
-    base: pick(Object.keys(BASES)), flower: pick(Object.keys(FLOWERS)), candle: pick(Object.keys(CANDLES)),
-    incense: Math.random() < .6,
-    name: pick(['พิมพ์ชนก','ต้นน้ำ','ภูมิ','แพรวา','มายด์','น้ำฝน','กอล์ฟ','ฝ้าย','พลอย','ไอซ์']),
-    message: pick([
-      'ขอให้ความทุกข์ทั้งหลายจมหายไปกับสายน้ำ ขอให้ชีวิตมีแต่ความสุข',
-      'ขอให้สอบผ่านทุกวิชา สมหวังทุกเรื่องที่ตั้งใจไว้',
-      'ขอให้ครอบครัวสุขภาพแข็งแรง',
-      'ลอยสิ่งที่ไม่ดีทั้งหมดทิ้งไป ขอให้ปีหน้าดีกว่าปีนี้',
-      'ขอให้ทุกคนที่อ่านข้อความนี้ มีความสุขมาก ๆ นะ',
-    ]),
-    createdAt: new Date().toISOString(),
-  };
-}
-function startDemo(){
-  const b = document.getElementById('modeBadge');
-  b.textContent = 'โหมดตัวอย่าง · ยังเชื่อมต่อฐานข้อมูลไม่ได้';
-  b.style.display = 'block';
-  pool = Array.from({ length: 24 }, demoItem);
-  setStats(0, 0);
-  /* ลองต่อ API ใหม่ทุก 30 วินาที — ได้แล้วโหลดหน้าใหม่เป็นข้อมูลจริง */
-  setInterval(async () => { try { await api('/krathongs/stats'); location.reload(); } catch (e) {} }, 30000);
 }
 
 loadInitial();

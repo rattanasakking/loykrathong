@@ -10,3 +10,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# ไฟล์ตรวจปัญหาชั่วคราว
+app/api/check.php

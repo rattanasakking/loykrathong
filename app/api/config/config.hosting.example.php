@@ -20,9 +20,11 @@ return [
     //   หรือรัน  php -r "echo bin2hex(random_bytes(32));"
     'app_secret' => 'CHANGE_ME_64_HEX_CHARS',
 
-    // หน้าเว็บกับ API อยู่โดเมนเดียวกัน ไม่ต้องเพิ่มอะไร
+    // หน้าจอแสดงผลที่เปิดจาก XAMPP บนเครื่องในงาน (http://localhost/loykrathong/) ต้องดึงกระทงจากเว็บจริงได้
     'allowed_origins' => [
-        'https://loykrathong.retc.ac.th'
+        'https://loykrathong.retc.ac.th',
+        'http://localhost',
+        'http://127.0.0.1'
     ],
 
     'trust_proxy_headers' => false,
