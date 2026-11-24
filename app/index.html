@@ -170,6 +170,18 @@ textarea{min-height:96px;font-family:var(--hand);font-size:1.05rem;line-height:1
 textarea:focus,.name-input:focus{outline:none;border-color:var(--gold)}
 textarea::placeholder,.name-input::placeholder{color:#6d81a3}
 .counter{text-align:right;color:var(--muted);font-size:.76rem;margin-top:6px}
+/* แนบรูป */
+.photo-pick{display:flex;align-items:center;gap:14px}
+.photo-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:14px;border:1.5px dashed var(--line);color:var(--ink);background:rgba(255,255,255,.04);cursor:pointer;font-size:.95rem;transition:.2s}
+.photo-btn:hover{border-color:var(--gold)}
+.photo-pick input{position:absolute;width:1px;height:1px;opacity:0}
+.photo-preview{position:relative;width:84px;height:84px;flex:none}
+.photo-preview img{width:100%;height:100%;object-fit:cover;border-radius:14px;border:2px solid var(--gold)}
+.photo-remove{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;background:#2a1a2e;color:#fff;border:1px solid var(--line);font-size:1rem;line-height:1;display:grid;place-items:center}
+.cer-photo{width:120px;height:120px;object-fit:cover;border-radius:18px;border:3px solid var(--gold);margin:12px auto 0;display:block}
+.cer-photo[hidden]{display:none}
+.ceremony.sailing .cer-photo{opacity:.12}
+.k-photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;margin-bottom:10px;display:block}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chip{font-size:.8rem;padding:7px 13px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:rgba(255,255,255,.03);transition:.2s}
 .chip:hover{color:var(--ink);border-color:var(--gold)}
@@ -359,6 +371,20 @@ footer{border-top:1px solid var(--line);padding:36px 0;text-align:center;backgro
           <div class="chips" id="presetChips"></div>
         </div>
 
+        <div class="field">
+          <h3><span class="stepnum">6</span>แนบรูปภาพ</h3>
+          <p class="hint">ไม่บังคับ — รูปจะขึ้นจอใหญ่พร้อมคำอวยพรของคุณ</p>
+          <div class="photo-pick">
+            <label class="photo-btn">📷 <span id="photoBtnText">เลือกรูป / ถ่ายรูป</span>
+              <input type="file" id="photoInput" accept="image/*"/>
+            </label>
+            <div class="photo-preview" id="photoPreview" hidden>
+              <img id="photoThumb" alt="รูปที่แนบ"/>
+              <button type="button" class="photo-remove" id="photoRemove" aria-label="เอารูปออก">&times;</button>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-release" id="floatBtn">ลอยกระทงของฉัน</button>
       </div>
     </div>
@@ -403,6 +429,7 @@ footer{border-top:1px solid var(--line);padding:36px 0;text-align:center;backgro
     <p class="cer-hint">หลับตา อธิษฐานเบา ๆ แล้วกดปล่อยให้สายน้ำพาไป</p>
     <p class="cer-msg" id="cerMsg"></p>
     <p class="cer-name" id="cerName"></p>
+    <img class="cer-photo" id="cerPhoto" alt="" hidden/>
     <div class="cer-actions">
       <button class="btn btn-primary" id="releaseBtn">ปล่อยลอยกระทง</button>
       <button class="btn btn-ghost" id="cancelBtn">ย้อนกลับ</button>
@@ -471,7 +498,7 @@ const QUOTES = [
   'ความดีที่หว่านไว้ ย่อมได้ผลเป็นพรเสมอ',
 ];
 
-const state = { base:'tong', flower:'lotus', candle:'gold', incense:true, message:'', name:'' };
+const state = { base:'tong', flower:'lotus', candle:'gold', incense:true, message:'', name:'', image:'' };
 
 /* =====================================================================
  *  API LAYER
@@ -609,6 +636,7 @@ class MockApiClient{
         incense: !!body.incense,
         message: body.message.trim(),
         name: (body.name||'').trim().slice(0,30),
+        image: body.image || null,
         createdAt: new Date().toISOString(),
       };
       // token พิสูจน์ความเป็นเจ้าของ เหมือน API จริง (ส่งกลับมาใน X-Owner-Token ตอนลบ)
@@ -904,6 +932,10 @@ function buildCard(item){
   msg.textContent = '\u201C'+(item.message||'')+'\u201D';
   const meta = document.createElement('p'); meta.className='k-meta';
   meta.textContent = (item.name ? item.name+' · ' : '') + timeAgo(item.createdAt);
+  if(item.image){
+    const ph = document.createElement('img'); ph.className='k-photo'; ph.loading='lazy'; ph.alt='';
+    ph.src = item.image; card.append(ph);
+  }
   card.append(art, msg, meta);
   if(isMine(item)){
     const del = document.createElement('button');
@@ -1114,6 +1146,8 @@ function openCeremony(){
   k.innerHTML = krathongSVG(state);
   $('#cerMsg').textContent = state.message.trim();
   $('#cerName').textContent = state.name.trim() ? '— '+state.name.trim() : '';
+  $('#cerPhoto').hidden = !state.image;
+  if(state.image) $('#cerPhoto').src = state.image;
   $('#cerStage').querySelectorAll('.cer-ripple').forEach(r=>r.remove());
   $('#cerBox').classList.remove('sailing');
   overlay.classList.add('show');
@@ -1176,6 +1210,7 @@ $('#releaseBtn').addEventListener('click', async ()=>{
     message: state.message.trim(),
     name: state.name.trim(),
   };
+  if(state.image) payload.image = state.image;
   const sailed = new Promise(r=>setTimeout(r, 3000));   // ยาวเท่า sailAway — ส่ง API ไปพร้อมกัน
   const result = await releaseKrathong(payload);
   if(result.error){
@@ -1186,6 +1221,7 @@ $('#releaseBtn').addEventListener('click', async ()=>{
   await sailed;
   state.message=''; state.name='';
   $('#messageInput').value=''; $('#nameInput').value='';
+  clearPhoto();
   updatePreview();
   refreshStats();
   await revealOwnDrift(result.item);
@@ -1209,6 +1245,53 @@ document.addEventListener('change', e=>{
 });
 $('#messageInput').addEventListener('input', e=>{ state.message = e.target.value; updatePreview(); });
 $('#nameInput').addEventListener('input', e=>{ state.name = e.target.value; });
+
+/* ---------- แนบรูป: ย่อในมือถือก่อนส่ง (ด้านยาว 480px, JPEG) ให้เบาเน็ต ---------- */
+const PHOTO_MAX = 480;
+function clearPhoto(){
+  state.image = '';
+  $('#photoInput').value = '';
+  $('#photoPreview').hidden = true;
+  $('#photoBtnText').textContent = 'เลือกรูป / ถ่ายรูป';
+}
+function loadImage(file){
+  return new Promise((resolve, reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.src = url;
+  });
+}
+async function shrinkPhoto(file){
+  const img = await loadImage(file);                 // เบราว์เซอร์หมุนรูปตาม EXIF ให้เอง
+  const scale = Math.min(1, PHOTO_MAX / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  let q = .82, out = c.toDataURL('image/jpeg', q);
+  while(out.length > 300000 && q > .4){ q -= .12; out = c.toDataURL('image/jpeg', q); }   // คุมไม่ให้เกิน ~220KB
+  return out;
+}
+$('#photoInput').addEventListener('change', async e=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('กรุณาเลือกไฟล์รูปภาพ'); clearPhoto(); return; }
+  $('#photoBtnText').textContent = 'กำลังเตรียมรูป...';
+  try{
+    state.image = await shrinkPhoto(file);
+    $('#photoThumb').src = state.image;
+    $('#photoPreview').hidden = false;
+    $('#photoBtnText').textContent = 'เปลี่ยนรูป';
+  }catch(err){
+    toast('เปิดรูปนี้ไม่ได้ ลองเลือกรูปอื่น (เช่น JPG/PNG)');
+    clearPhoto();
+  }
+});
+$('#photoRemove').addEventListener('click', clearPhoto);
 $('#presetChips').addEventListener('click', e=>{
   const b = e.target.closest('.chip'); if(!b) return;
   $('#messageInput').value = b.textContent;

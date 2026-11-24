@@ -1,0 +1,8 @@
+# เก็บเฉพาะรูปกระทง {id 24 ตัว}.jpg ที่ API สร้างเอง — ไฟล์อื่นห้ามเปิด / ห้ามรันสคริปต์
+Options -Indexes
+<FilesMatch ".*">
+  Require all denied
+</FilesMatch>
+<FilesMatch "^[a-f0-9]{24}\.jpg$">
+  Require all granted
+</FilesMatch>

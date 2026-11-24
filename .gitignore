@@ -11,5 +11,9 @@ Thumbs.db
 .idea/
 *.log
 
+# รูปที่ผู้ใช้อัปโหลด (เก็บแค่ .htaccess ของโฟลเดอร์)
+app/uploads/*
+!app/uploads/.htaccess
+
 # ไฟล์ตรวจปัญหาชั่วคราว
 app/api/check.php

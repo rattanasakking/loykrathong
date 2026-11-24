@@ -35,6 +35,9 @@ final class Validator
         $name = self::cleanText(self::str($in, 'name'));
         if (mb_strlen($name) > 30) $errors[] = 'ชื่อยาวเกิน 30 ตัวอักษร';
 
+        // รูปแนบ (ไม่บังคับ) — data URL ตรวจละเอียดใน ImageStore::prepare()
+        $image = self::str($in, 'image');
+
         if ($errors) {
             throw new ApiException(400, implode(' / ', $errors), 'VALIDATION');
         }
@@ -46,6 +49,7 @@ final class Validator
             'incense' => !empty($in['incense']) ? 1 : 0,
             'message' => $message,
             'name'    => $name,
+            'image'   => $image,
         ];
     }
 

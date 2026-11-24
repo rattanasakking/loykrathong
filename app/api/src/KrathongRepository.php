@@ -139,6 +139,7 @@ final class KrathongRepository
             'incense'   => (bool)$r['incense'],
             'message'   => $r['message'],
             'name'      => $r['author_name'],
+            'image'     => ImageStore::urlFor($r['id']),   // 'uploads/{id}.jpg' เทียบกับ app/ หรือ null
             'createdAt' => self::toIso($r['created_at']),
         ];
     }

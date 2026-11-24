@@ -105,6 +105,15 @@
     border: 1px solid rgba(243,201,105,.38);
     text-align: center;
   }
+  .wish.has-photo { display: flex; align-items: center; gap: 12px; text-align: left; padding-left: 8px; }
+  .wish .photo {
+    flex: none; width: 76px; height: 76px;
+    object-fit: cover; border-radius: 10px;
+    border: 2px solid var(--gold);
+    background: #111;
+  }
+  .lane-mid .wish .photo { width: 62px; height: 62px; }
+  .wish .txt { min-width: 0; }
   .wish .who { font-size: 17px; font-weight: 700; color: var(--gold); }
   .wish .msg {
     font-size: 19px; line-height: 1.35; color: #fff;
@@ -445,6 +454,14 @@ const fresh = [];         // กระทงใหม่ รอขึ้นจ�
 const seen = new Set();
 let newestAt = null;
 
+/* รูปที่แนบ: API ส่ง 'uploads/{id}.jpg' เทียบกับโฟลเดอร์ app/ */
+const APP_ROOT = new URL(CONFIG.API_BASE.replace(/api\/?$/, ''), location.href).href;
+function imageUrl(item){
+  if (!item.image || typeof item.image !== 'string') return null;
+  if (!/^uploads\/[a-f0-9]{24}\.jpg$/.test(item.image)) return null;   // รับเฉพาะรูปที่ API สร้าง
+  return APP_ROOT + item.image;
+}
+
 function nextFromPool(){
   if (!pool.length) return null;
   poolIdx = (poolIdx + 1) % pool.length;
@@ -485,7 +502,21 @@ function spawn(lane, item, isNew, startAt = 0){
     const msg = document.createElement('div');
     msg.className = 'msg';
     msg.textContent = item.message || '';
-    wish.append(who, msg);
+    const txt = document.createElement('div');
+    txt.className = 'txt';
+    txt.append(who, msg);
+    const photoUrl = imageUrl(item);
+    if (photoUrl) {
+      const img = document.createElement('img');
+      img.className = 'photo';
+      img.alt = '';
+      img.decoding = 'async';
+      img.src = photoUrl;
+      img.onerror = () => { img.remove(); wish.classList.remove('has-photo'); };
+      wish.classList.add('has-photo');
+      wish.append(img);
+    }
+    wish.append(txt);
     bob.appendChild(wish);
   }
   const k = document.createElement('div');

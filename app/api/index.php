@@ -16,6 +16,7 @@ require __DIR__.'/src/Security.php';
 require __DIR__.'/src/Validator.php';
 require __DIR__.'/src/RateLimiter.php';
 require __DIR__.'/src/KrathongRepository.php';
+require __DIR__.'/src/ImageStore.php';
 
 /* ยังไม่ได้ตั้งค่า = ไม่ทำงานเลย ดีกว่ารันด้วย secret ที่ทุกคนรู้ (frontend โหมด auto จะสลับไปใช้ Mock เอง) */
 $configFile = __DIR__.'/config/config.php';
@@ -87,6 +88,7 @@ try {
         if (!$ok) {
             Http::error(403, 'ลบได้เฉพาะกระทงที่คุณลอยเองเท่านั้น', 'FORBIDDEN');
         }
+        ImageStore::delete($id);
         http_response_code(204);
         exit;
     } elseif ($matched) {
@@ -104,9 +106,16 @@ try {
                 $config['rate_limits']['write']['limit'],
                 $config['rate_limits']['write']['window']);
 
-            $in = Http::readJsonBody($config['max_body_bytes']);
+            // รูปแนบ (base64) ทำให้ body ใหญ่ขึ้น — เผื่อขนาดไว้ไม่ต้องแก้ config บนโฮสต์
+            $maxBody = max((int)$config['max_body_bytes'], (int)ceil(ImageStore::MAX_INPUT_BYTES * 4 / 3) + 4096);
+            $in = Http::readJsonBody($maxBody);
             $data = Validator::krathong($in);
+            // ตรวจ/แปลงรูปก่อนบันทึก — รูปเสียจะไม่เกิดกระทงค้างในฐานข้อมูล
+            $jpg = $data['image'] !== '' ? ImageStore::prepare($data['image']) : null;
             $item = $repo->create($data, $ipHash);
+            if ($jpg !== null) {
+                $item['image'] = ImageStore::save($item['id'], $jpg);
+            }
 
             Http::json(201, [
                 'item' => $item,
