@@ -347,12 +347,16 @@ footer{border-top:1px solid var(--line);padding:36px 0;text-align:center;backgro
         </div>
 
         <div class="field">
-          <h3><span class="stepnum">4</span>เขียนคำอวยพร</h3>
+          <h3><span class="stepnum">4</span>ลงชื่อ</h3>
+          <input class="name-input" id="nameInput" maxlength="30" placeholder="ลงชื่อก็ได้ ไม่บังคับ (เช่น ปอนด์)"/>
+        </div>
+
+        <div class="field">
+          <h3><span class="stepnum">5</span>เขียนคำอวยพร</h3>
           <p class="hint">ข้อความจะลอยไปพร้อมกระทงของคุณ</p>
           <textarea id="messageInput" maxlength="140" placeholder="เช่น ขอให้ความทุกข์ทั้งหลายจมหายไปกับสายน้ำ..."></textarea>
           <div class="counter" id="msgCount">0/140</div>
           <div class="chips" id="presetChips"></div>
-          <input class="name-input" id="nameInput" maxlength="30" style="margin-top:12px" placeholder="ลงชื่อก็ได้ ไม่บังคับ (เช่น ปอนด์)"/>
         </div>
 
         <button class="btn-release" id="floatBtn">ลอยกระทงของฉัน</button>
